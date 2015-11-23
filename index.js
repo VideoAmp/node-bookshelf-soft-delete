@@ -1,5 +1,7 @@
 'use strict';
 
+var Promise = require("bluebird")
+
 function shouldDisable(opts) {
   return opts && opts.hasOwnProperty('softDelete') && !opts.softDelete;
 }
@@ -83,15 +85,16 @@ module.exports = function (Bookshelf) {
         var model = this;
         var softFields = model.softFields;
         return model.triggerThen('destroying', model, opts)
-          .then(function () {
-            if (softFields[1]) {
-              model.set(softFields[1], null);
-            }
-            model.set(softFields[0], new Date());
-            return model.save();
-          })
-          .then(function () {
-            return model.triggerThen('destroyed', model, undefined, opts);
+          .then(function (models) {
+            return Promise.map(models, function(model) {
+              if (softFields[1]) {
+                model.set(softFields[1], null);
+              }
+              model.set(softFields[0], new Date());
+              return model.save().then(function(savedModel) {
+                return savedModel.triggerThen('destroyed', savedModel, undefined, opts);
+              });
+            });
           });
       } else {
         return mProto.destroy.apply(this, arguments);
