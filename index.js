@@ -1,5 +1,7 @@
 'use strict';
 
+var Promise = require("bluebird")
+
 var softActivated = false;
 var softFields = ['deleted_at', 'restored_at'];
 
@@ -75,13 +77,13 @@ module.exports = function (Bookshelf) {
       if (softActivated && !shouldDisable(opts)) {
         this.set(softFields[1], null);
         this.set(softFields[0], new Date());
-        return this.save()
-          .tap(function (model) {
-            return model.triggerThen('destroying', model, opts);
-          })
-          .then(function (model) {
-            return model.triggerThen('destroyed', model, undefined, opts);
+        return this.triggerThen('destroying', this, opts).then(function (models) {
+          return Promise.map(models, function(model) {
+            return model.save().then(function(savedModel) {
+              return savedModel.triggerThen('destroyed', savedModel, undefined, opts);
+            });
           });
+        });
       } else {
         return mProto.destroy.apply(this, arguments);
       }
