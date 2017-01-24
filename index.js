@@ -7,6 +7,8 @@ function shouldDisable(opts) {
 function addDeletionCheck(softFields) {
   var deletedAtField = softFields[0];
   var restoredAtField = softFields[1];
+  var joinTableDeletedAtField = null;
+  var joinTableRestoredAtField = null;
 
   /*eslint-disable no-underscore-dangle*/
   if (this._knex) {
@@ -21,13 +23,27 @@ function addDeletionCheck(softFields) {
       var table = this.relatedData.targetTableName;
       deletedAtField = table + '.' + softFields[0];
       restoredAtField = table + '.' + softFields[1];
+      if (this.relatedData.joinTableName) {
+          var joinTable = this.relatedData.joinTableName;
+          joinTableDeletedAtField = joinTable + '.' + softFields[0];
+          joinTableRestoredAtField = joinTable + '.' + softFields[1];
+      }
   }
 
   this.query(function (qb) {
     qb.where(function () {
       var query = this.whereNull(deletedAtField);
+
       if (softFields[1]) {
         query.orWhereNotNull(restoredAtField);
+      }
+
+      if (joinTableDeletedAtField) {
+          query.orWhereNull(joinTableDeletedAtField);
+      }
+
+      if (joinTableRestoredAtField) {
+          query.orWhereNotNull(joinTableDeletedAtField);
       }
     });
   });
