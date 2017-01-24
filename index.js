@@ -17,6 +17,12 @@ function addDeletionCheck(softFields) {
     restoredAtField = table + '.' + softFields[1];
   }
 
+  if (this.relatedData) {
+      var table = this.relatedData.targetTableName;
+      deletedAtField = table + '.' + softFields[0];
+      restoredAtField = table + '.' + softFields[1];
+  }
+
   this.query(function (qb) {
     qb.where(function () {
       var query = this.whereNull(deletedAtField);
